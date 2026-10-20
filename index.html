@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Agenda Planilla</title>
+<meta name="description" content="Subí tu planilla de tareas y armá tu calendario, tu checklist y tus recordatorios por correo.">
+<meta name="theme-color" content="#4A7C6A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234A7C6A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='3'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4M8.5 15l2.3 2.3L15.5 13'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Ingreso -->
+<main class="login" id="login" hidden>
+  <div class="login-card">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8.5 15l2.3 2.3L15.5 13"/></svg></div>
+      <div>
+        <h1>Agenda Planilla</h1>
+        <p class="muted" style="font-size:13.5px">Del Excel al calendario, con recordatorios en tu correo.</p>
+      </div>
+    </div>
+    <form id="emailForm" class="field">
+      <span>Tu correo</span>
+      <input type="email" id="loginEmail" required autocomplete="email" placeholder="nombre@correo.com">
+      <button class="btn primary" type="submit" id="sendCode">Enviarme un código</button>
+    </form>
+    <form id="codeForm" class="field" hidden>
+      <span id="codeLbl">Código que te llegó por correo</span>
+      <input type="text" id="loginCode" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required>
+      <button class="btn primary" type="submit" id="verifyCode">Ingresar</button>
+      <button class="btn quiet sm" type="button" id="backEmail">Usar otro correo</button>
+    </form>
+    <div id="loginMsg"></div>
+    <p class="note">No hace falta contraseña. Al ingresar aceptás que guardemos tus tareas y tu correo para mostrarte la agenda y enviarte los avisos.</p>
+  </div>
+</main>
+
+<div class="loading" id="loading">Cargando…</div>
+
+<!-- App -->
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M8.5 15l2.3 2.3L15.5 13"/></svg></div>
+      <div>
+        <h1>Agenda Planilla</h1>
+        <p class="muted" style="font-size:13.5px">Del Excel al calendario, con recordatorios en tu correo.</p>
+      </div>
+    </div>
+    <div class="head-r">
+      <button class="pill" id="linkPill" type="button"><i></i><span id="linkTxt"></span></button>
+      <button class="btn quiet sm" id="logout" type="button">Salir</button>
+    </div>
+  </header>
+
+  <div class="filebar" id="filebar" hidden>
+    <div class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></div>
+    <div class="info">
+      <div class="name" id="fbName"></div>
+      <div class="sub" id="fbSub"></div>
+    </div>
+    <a class="btn quiet sm" href="plantilla-agenda.xlsx" download>Descargar plantilla</a>
+    <button class="btn soft sm" id="changeBtn" type="button">Subir otra planilla</button>
+  </div>
+
+  <details class="issues" id="issues" hidden>
+    <summary id="issuesSum"></summary>
+    <ul id="issuesList"></ul>
+  </details>
+
+  <section class="setup" id="setup" hidden aria-label="Cargar planilla">
+    <div class="step">
+      <h2>Subir planilla</h2>
+      <label class="drop" id="drop" for="file">
+        <strong>Arrastrá el Excel o tocá para elegirlo</strong>
+        <small>Tiene que seguir la plantilla de Agenda Planilla</small>
+      </label>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv,.ods" hidden>
+      <div class="row">
+        <select id="sheet" hidden aria-label="Hoja"></select>
+        <button class="btn quiet sm" id="closeSetup" type="button" hidden>Cancelar</button>
+      </div>
+      <div id="rejectBox"></div>
+      <div class="preview" id="preview" hidden></div>
+    </div>
+
+    <div class="step">
+      <h2>La plantilla</h2>
+      <ul class="cols">
+        <li><b>Tarea</b><span class="req">Obligatoria</span></li>
+        <li><b>Fecha inicio</b><span class="req">Obligatoria</span><span>dd/mm/aaaa</span></li>
+        <li><b>Frecuencia</b><span>Lista desplegable: única vez, diaria, semanal, mensual…</span></li>
+        <li><b>Hora</b><span>hh:mm</span></li>
+        <li><b>Responsable</b><span>Texto libre</span></li>
+        <li><b>Área</b><span>Define el color en el calendario</span></li>
+        <li><b>Prioridad</b><span>Alta, Media o Baja</span></li>
+        <li><b>Notas</b><span>Texto libre</span></li>
+      </ul>
+      <div class="row"><a class="btn primary" href="plantilla-agenda.xlsx" download>Descargar plantilla</a></div>
+      <p class="note">La plantilla trae las listas desplegables. La fila de ejemplo se ignora al subir. Subir una planilla nueva reemplaza las tareas anteriores.</p>
+    </div>
+  </section>
+
+  <div class="topline">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-agenda" aria-selected="true" aria-controls="view-agenda">Agenda <span class="count" id="pendCount">0</span></button>
+      <button class="tab" role="tab" id="tab-rem" aria-selected="false" aria-controls="view-rem">Recordatorios</button>
+    </div>
+    <div class="summary">
+      <span><b id="sDone">0</b> de <b id="sTotal">0</b> hechas</span>
+      <div class="bar"><i id="sBar"></i></div>
+      <span class="late"><b id="sLate">0</b> vencidas</span>
+      <span><b id="sToday">0</b> para hoy</span>
+    </div>
+  </div>
+
+  <section id="view-agenda" role="tabpanel" aria-labelledby="tab-agenda" class="agenda">
+    <div class="calcol">
+      <div class="calbar">
+        <h2 id="monthLbl"></h2>
+        <div class="row">
+          <select class="sm" id="horizon" aria-label="Mostrar repeticiones hasta"><option value="3">3 meses</option><option value="6" selected>6 meses</option><option value="12">12 meses</option></select>
+          <button class="btn icon" id="prev" type="button" aria-label="Mes anterior">←</button>
+          <button class="btn sm" id="todayBtn" type="button">Hoy</button>
+          <button class="btn icon" id="next" type="button" aria-label="Mes siguiente">→</button>
+        </div>
+      </div>
+      <div class="calwrap"><div class="cal" id="cal"></div></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <aside class="side" aria-label="Checklist">
+      <div class="side-h">
+        <div class="row">
+          <h2>Checklist</h2>
+          <span id="dayChip"></span>
+        </div>
+        <div class="filters">
+          <input type="search" id="q" placeholder="Buscar">
+          <select id="fWho" aria-label="Responsable"><option value="">Todos</option></select>
+          <select id="fRange" aria-label="Período">
+            <option value="7">7 días</option>
+            <option value="30" selected>30 días</option>
+            <option value="all">Todo</option>
+          </select>
+        </div>
+        <label class="note" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fHide"> Ocultar hechas</label>
+      </div>
+      <div class="side-b" id="list"></div>
+    </aside>
+  </section>
+
+  <section id="view-rem" role="tabpanel" aria-labelledby="tab-rem" hidden>
+    <div class="rem">
+      <div class="card">
+        <h2>Avisos por correo</h2>
+        <p class="note">Te mandamos un resumen a <b id="remEmail"></b> a las 8:00, con las tareas pendientes.</p>
+        <div class="checks">
+          <label><input type="checkbox" id="rDay"> El día anterior: tareas de mañana</label>
+          <label><input type="checkbox" id="rSame"> El mismo día: tareas de hoy</label>
+        </div>
+        <div id="remMsg"></div>
+        <hr>
+        <div class="field">
+          <span>Pasar las tareas a tu calendario</span>
+          <button class="btn" id="icsBtn" type="button">Descargar archivo .ics</button>
+          <p class="note">Sirve para Google Calendar, Outlook o iPhone: abrilo y se importan todas las tareas con sus repeticiones.</p>
+        </div>
+        <div class="field">
+          <span>Hora para tareas sin hora</span>
+          <input type="time" id="defHour" value="09:00">
+        </div>
+      </div>
+
+      <div class="remlist">
+        <div class="listhead"><h2>Agregar de a una a Google Calendar</h2></div>
+        <div id="remList"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">¿Dudas o problemas? Escribinos a <span id="contact">CAMBIAR-POR-TU-CORREO</span>.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
